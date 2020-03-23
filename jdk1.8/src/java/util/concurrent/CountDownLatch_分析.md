@@ -1,14 +1,13 @@
 # CountDownLatch
 
-> 在并发编程的场景中，最常见的一个case是某个任务的执行，需要等到多个线程都执行完毕之后才可以进行，CountDownLatch可以很好解决这个问题
+### 1、介绍
+​		在并发编程的场景中，最常见的一个case是某个任务的执行，需要等到多个线程都执行完毕之后才可以进行，CountDownLatch可以很好解决这个问题。
 
-闭锁（Latch）：一种同步方法，可以延迟线程的进度直到线程到达某个终点状态。通俗的讲就是，一个闭锁相当于一扇大门，在大门打开之前所有线程都被阻断，一旦大门打开所有线程都将通过，但是一旦大门打开，所有线程都通过了，那么这个闭锁的状态就失效了，门的状态也就不能变了，只能是打开状态。也就是说闭锁的状态是一次性的，它确保在闭锁打开之前所有特定的活动都需要在闭锁打开之后才能完成。
+​		闭锁（Latch）：一种同步方法，可以延迟线程的进度直到线程到达某个终点状态。通俗的讲就是，一个闭锁相当于一扇大门，在大门打开之前所有线程都被阻断，一旦大门打开所有线程都将通过，但是一旦大门打开，所有线程都通过了，那么这个闭锁的状态就失效了，门的状态也就不能变了，只能是打开状态。也就是说闭锁的状态是一次性的，它确保在闭锁打开之前所有特定的活动都需要在闭锁打开之后才能完成。
 
-**CountDownLatch**是JDK 5+里面闭锁的一个实现，允许一个或者多个线程等待某个事件的发生。**CountDownLatch**有一个正数计数器，*countDown*方法对计数器做减操作，*await*方法等待计数器达到0。所有*await*的线程都会阻塞直到计数器为0或者等待线程中断或者超时。
+​		**CountDownLatch**是JDK 5+里面闭锁的一个实现，允许一个或者多个线程等待某个事件的发生。**CountDownLatch**有一个正数计数器，*countDown*方法对计数器做减操作，*await*方法等待计数器达到0。所有*await*的线程都会阻塞直到计数器为0或者等待线程中断或者超时。
 
-## 1、CountDownLatch是什么？
-
-### 1.1、接口定义
+#### 1.1、核心接口/方法定义
 
 ```java
 // 构造器，必须指定一个大于零的计数
@@ -39,7 +38,9 @@ public long getCount() {
 }
 ```
 
-### 2.2、demo示例
+#### 1.2、构造方法
+
+#### 1.3、demo示例
 
 ```java
 import java.util.concurrent.CountDownLatch;
@@ -148,18 +149,16 @@ public class CountDownLatchTest {
 
 **注意**
 
-- 在创建实例是，必须指定初始的计数值，且应大于0
+- 在创建实例时，必须指定初始的计数值，且应大于0
 - 必须有线程中显示的调用了countDown()计数-1方法；必须有线程显示调用了 await()方法（没有这个就没有必要使用CountDownLatch了）
 - 由于await()方法会阻塞到计数为0，如果在代码逻辑中某个线程漏掉了计数-1，导致最终计数一直大于0，直接导致死锁了
 - 鉴于上面一点，更多的推荐 await(long, TimeUnit)来替代直接使用await()方法，至少不会造成阻塞死只能重启的情况
 
-有兴趣的小伙伴可以对比下这个实现与 [《Java并发学习之ReentrantLock的工作原理及使用姿势》](https://my.oschina.net/u/566591/blog/1557978)中的demo，明显感觉使用CountDownLatch优雅得多（后面有机会介绍用更有意思的Fork/Join来实现累加）
-
-### 1.3、应用场景
+#### 1.4、应用场景
 
 前面给了一个demo演示如何用，那这个东西在实际的业务场景中是否会用到呢？
 
-因为确实在一个业务场景中使用到了，不然也就不会单独捞出这一节...
+因为确实在一个业务场景中使用到了，不然也就不会单独拎出这一节...
 
 电商的详情页，由众多的数据拼装组成，如可以分成一下几个模块
 
@@ -188,15 +187,14 @@ public class CountDownLatchTest {
 - 确保某个服务在其依赖的所有其他服务都已经启动之后才启动
 - 等待直到每个操作的所有参与者都就绪再执行（比如打麻将时需要等待四个玩家就绪）
 
-## 2、CountDownLatch原理
-
-### 2.1、实现原理
-
+### 2、原理
 同ReentrantLock一样，依然是借助AQS的双端队列，来实现原子的计数-1，线程阻塞和唤醒
 
-### 2.2、AbstractQueuedSynchronizer
+AbstractQueuedSynchronizer
 
-> AQS是一个用于构建锁和同步容器的框架。事实上concurrent包内许多类都是基于AQS构建，例如ReentrantLock，Semaphore，CountDownLatch，ReentrantReadWriteLock，FutureTask等。AQS解决了在实现同步容器时设计的大量细节问题
+
+
+AQS是一个用于构建锁和同步容器的框架。事实上concurrent包内许多类都是基于AQS构建，例如ReentrantLock，Semaphore，CountDownLatch，ReentrantReadWriteLock，FutureTask等。AQS解决了在实现同步容器时设计的大量细节问题。
 
 AQS使用一个FIFO的队列表示排队等待锁的线程，队列头节点称作“哨兵节点”或者“哑节点”，它不与任何线程关联。其他的节点与等待线程关联，每个节点维护一个等待状态waitStatus
 
@@ -238,7 +236,9 @@ static final class Node {
 }
 ```
 
-### 2.3、计数器的初始化
+
+
+#### 2.1、计数器的初始化
 
 CountDownLatch内部实现了AQS，并覆盖了tryAcquireShared()和tryReleaseShared()两个方法，下面说明干嘛用的。通过前面的使用，清楚了计数器的构造必须指定计数值,这个直接初始化了 AQS内部的state变量
 
@@ -250,7 +250,7 @@ Sync(int count) {
 
 后续的计数-1/判断是否可用都是基于sate进行的
 
-### 2.4、countDown() 计数-1
+#### 2.2、countDown() 计数-1
 
 ```java
 // 计数-1
@@ -391,7 +391,7 @@ public class CountDownLatchDemo {
 
 即CountDownLatch计数为0之后，所有被阻塞的线程都会被唤醒，且彼此相对独立，不会出现独占锁阻塞的问题
 
-### 2.5、await() 阻塞
+#### 2.3、await() 阻塞
 
 使当前线程在锁存器倒计数至零之前一直等待，除非线程被中断，或者等待超时
 
@@ -452,9 +452,9 @@ private void doAcquireSharedInterruptibly(int arg)
 3. 当前线程封装Node对象，进入阻塞队列
 4. 然后就是循环尝试获取锁，直到成功（即state为0）后出队，继续执行线程后续代码
 
-## 3、小结
+### 3、总结
 
-### 3.1、使用注意
+#### 3.1、使用注意
 
 - 在创建实例时，必须指定初始的计数值，且应大于0
 - 必须有线程中显示的调用了countDown()计数-1方法；必须有线程显示调用了await()方法（没有这个就没有必要使用CountDownLatch了）
@@ -462,7 +462,7 @@ private void doAcquireSharedInterruptibly(int arg)
 - 鉴于上面一点，更多的推荐 await(long, TimeUnit)来替代直接使用await()方法，至少不会造成阻塞死只能重启的情况
 - 允许多个线程调用await方法，当计数为0后，所有被阻塞的线程都会被唤醒
 
-### 3.2、实现原理
+#### 3.2、其他
 
 **await内部实现流程:**
 
