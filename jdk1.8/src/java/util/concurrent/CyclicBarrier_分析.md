@@ -1,32 +1,45 @@
 # CyclicBarrier
 
-回环栅栏，通过它可以实现让一组线程等待至某个状态之后再全部同时执行。叫做回环是因为当所有等待线程都被释放以后，CyclicBarrier可以被重用。我们暂且把这个状态就叫做barrier，当调用await()方法之后，线程就处于barrier了。
+### 1、介绍
 
-<u>CyclicBarrier ，一个同步辅助类，在 AP I中是这么介绍的：</u>
-<u>它允许一组线程互相等待，直到到达某个公共屏障点 (Common Barrier Point)。在涉及一组固定大小的线程的程序中，这些线程必须不时地互相等待，此时 CyclicBarrier 很有用。因为该 Barrier 在释放等待线程后可以重用，所以称它为循环( Cyclic ) 的 屏障( Barrier ) 。</u>
-<u>通俗点讲就是：让一组线程到达一个屏障时被阻塞，直到最后一个线程到达屏障时，屏障才会开门，所有被屏障拦截的线程才会继续干活。</u>
+CyclicBarrier是一个同步辅助类，它允许一组线程互相等待，直到到达某个公共屏障点 (common barrier point)。在涉及一组固定大小的线程的程序中，这些线程必须不时地互相等待，此时 CyclicBarrier 很有用。因为该 barrier 在释放等待线程后可以重用，所以称它为*循环* 的 barrier。
 
-### 1.1、构造器
+CyclicBarrier类似于CountDownLatch也是个计数器， 不同的是CyclicBarrier数的是调用了CyclicBarrier.await()进入等待的线程数， 当线程数达到了CyclicBarrier初始时规定的数目时，所有进入等待状态的线程被唤醒并继续。 CyclicBarrier就象它名字的意思一样，可看成是个障碍， 所有的线程必须到齐后才能一起通过这个障碍。 CyclicBarrier初始时还可带一个Runnable的参数，此Runnable任务在CyclicBarrier的数目达到后，所有其它线程被唤醒前被执行。
+
+#### 1.1、核心接口/方法定义
+
+```java
+//在所有参与者都已经在此 barrier 上调用 await 方法之前，将一直等待。
+int await()
+//在所有参与者都已经在此屏障上调用 await 方法之前，将一直等待。
+int await(long timeout, TimeUnit unit)
+//返回当前在屏障处等待的参与者数目。
+int	getNumberWaiting()
+//返回要求启动此 barrier 的参与者数目。
+int	getParties()
+//查询此屏障是否处于损坏状态。
+boolean	isBroken()
+//将屏障重置为其初始状态
+void	reset()
+```
+
+
+
+#### 1.2、构造方法
 
 CyclicBarrier类位于java.util.concurrent包下，CyclicBarrier提供2个构造器：
 
 ```java
     /**
-     * Creates a new {@code CyclicBarrier} that will trip when the
-     * given number of parties (threads) are waiting upon it, and which
-     * will execute the given barrier action when the barrier is tripped,
-     * performed by the last thread entering the barrier.
      *
-     * @param parties the number of threads that must invoke {@link #await}
-     *        before the barrier is tripped
-     * @param barrierAction the command to execute when the barrier is
-     *        tripped, or {@code null} if there is no action
-     * @throws IllegalArgumentException if {@code parties} is less than 1
+     * 创建一个新的 CyclicBarrier，它将在给定数量的参与者（线程）处于等待状态时启动，
+     * 并在启动 barrier 时执行给定的屏障操作，该操作由最后一个进入 barrier 的线程执行。
      *
-     * 创建一个新的 CyclicBarrier，它将在给定数量的参与者（线程）处于等待状态时启动，并在启动 barrier 时执行给定的屏障操作，该操作由最后一个进入 barrier 的线程执行。
      * parties:表示拦截线程的总数量
      * count:拦截线程的剩余需要数量
-     * barrierAction: CyclicBarrier 接收的 Runnable 命令，用于在线程到达屏障时，优先执行 barrierAction ，用于处理更加复杂的业务场景。
+     * barrierAction: CyclicBarrier 接收的 Runnable 命令，用于在线程到达屏障时，
+     * 优先执行barrierAction ，用于处理更加复杂的业务场景。
+     *
      * generation:表示 CyclicBarrier 的更新换代
      */
     public CyclicBarrier(int parties, Runnable barrierAction) {
@@ -37,33 +50,309 @@ CyclicBarrier类位于java.util.concurrent包下，CyclicBarrier提供2个构造
     }
 
     /**
-     * Creates a new {@code CyclicBarrier} that will trip when the
-     * given number of parties (threads) are waiting upon it, and
-     * does not perform a predefined action when the barrier is tripped.
-     *
-     * @param parties the number of threads that must invoke {@link #await}
-     *        before the barrier is tripped
-     * @throws IllegalArgumentException if {@code parties} is less than 1
-     *
-     * 创建一个新的 CyclicBarrier，它将在给定数量的参与者（线程）处于等待状态时启动，但它不会在启动 barrier 时执行预定义的操作。
+     * 创建一个新的 CyclicBarrier，它将在给定数量的参与者（线程）处于等待状态时启动，
+     * 但它不会在启动 barrier 时执行预定义的操作。
      */
     public CyclicBarrier(int parties) {
         this(parties, null);
     }
 ```
 
-　　参数parties指让多少个线程或者任务等待至barrier状态；参数barrierAction为当这些线程都达到barrier状态时会执行的内容。
+参数parties指让多少个线程或者任务等待至barrier状态；参数barrierAction为当这些线程都达到barrier状态时会执行的内容。
 
-### 1.2、await方法
+#### 1.3、demo示例
 
-　　然后CyclicBarrier中最重要的方法就是await方法，它有2个重载版本：
+假若有若干个线程都要进行写数据操作，并且只有所有线程都完成写数据操作之后，这些线程才能继续做后面的事情，此时就可以利用CyclicBarrier了：
 
 ```java
-	     * @return the arrival index of the current thread, where index
+public class Test {
+    public static void main(String[] args) {
+        int N = 4;
+        CyclicBarrier barrier  = new CyclicBarrier(N);
+        for(int i=0;i<N;i++)
+            new Writer(barrier).start();
+    }
+    static class Writer extends Thread{
+        private CyclicBarrier cyclicBarrier;
+        public Writer(CyclicBarrier cyclicBarrier) {
+            this.cyclicBarrier = cyclicBarrier;
+        }
+ 
+        @Override
+        public void run() {
+            System.out.println("线程"+Thread.currentThread().getName()+"正在写入数据...");
+            try {
+                Thread.sleep(5000);      //以睡眠来模拟写入数据操作
+                System.out.println("线程"+Thread.currentThread().getName()+"写入数据完毕，等待其他线程写入完毕");
+                cyclicBarrier.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }catch(BrokenBarrierException e){
+                e.printStackTrace();
+            }
+            System.out.println("所有线程写入完毕，继续处理其他任务...");
+        }
+    }
+}
+
+输出：
+线程Thread-0正在写入数据...
+线程Thread-3正在写入数据...
+线程Thread-2正在写入数据...
+线程Thread-1正在写入数据...
+线程Thread-2写入数据完毕，等待其他线程写入完毕
+线程Thread-0写入数据完毕，等待其他线程写入完毕
+线程Thread-3写入数据完毕，等待其他线程写入完毕
+线程Thread-1写入数据完毕，等待其他线程写入完毕
+所有线程写入完毕，继续处理其他任务...
+所有线程写入完毕，继续处理其他任务...
+所有线程写入完毕，继续处理其他任务...
+所有线程写入完毕，继续处理其他任务...
+```
+
+从上面输出结果可以看出，每个写入线程执行完写数据操作之后，就在等待其他线程写入操作完毕。
+
+当所有线程线程写入操作完毕之后，所有线程就继续进行后续的操作了。
+
+
+
+**携带Runnable参数：**
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        int N = 4;
+        CyclicBarrier barrier  = new CyclicBarrier(N,new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("当前线程"+Thread.currentThread().getName());   
+            }
+        });
+         
+        for(int i=0;i<N;i++)
+            new Writer(barrier).start();
+    }
+    static class Writer extends Thread{
+        private CyclicBarrier cyclicBarrier;
+        public Writer(CyclicBarrier cyclicBarrier) {
+            this.cyclicBarrier = cyclicBarrier;
+        }
+ 
+        @Override
+        public void run() {
+            System.out.println("线程"+Thread.currentThread().getName()+"正在写入数据...");
+            try {
+                //以睡眠来模拟写入数据操作
+                Thread.sleep(5000);      
+                System.out.println("线程"+Thread.currentThread().getName()+"写入数据完毕，等待其他线程写入完毕");
+                cyclicBarrier.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }catch(BrokenBarrierException e){
+                e.printStackTrace();
+            }
+            System.out.println("所有线程写入完毕，继续处理其他任务...");
+        }
+    }
+}
+
+输出：
+线程Thread-0正在写入数据...
+线程Thread-1正在写入数据...
+线程Thread-2正在写入数据...
+线程Thread-3正在写入数据...
+线程Thread-0写入数据完毕，等待其他线程写入完毕
+线程Thread-1写入数据完毕，等待其他线程写入完毕
+线程Thread-2写入数据完毕，等待其他线程写入完毕
+线程Thread-3写入数据完毕，等待其他线程写入完毕
+当前线程Thread-3
+所有线程写入完毕，继续处理其他任务...
+所有线程写入完毕，继续处理其他任务...
+所有线程写入完毕，继续处理其他任务...
+所有线程写入完毕，继续处理其他任务...
+```
+
+从结果可以看出，当四个线程都到达barrier状态后，会从四个线程中选择一个线程去执行Runnable。
+
+
+
+**为await指定时间的效果**：
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        int N = 4;
+        CyclicBarrier barrier  = new CyclicBarrier(N);
+         
+        for(int i=0;i<N;i++) {
+            if(i<N-1)
+                new Writer(barrier).start();
+            else {
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                new Writer(barrier).start();
+            }
+        }
+    }
+    static class Writer extends Thread{
+        private CyclicBarrier cyclicBarrier;
+        public Writer(CyclicBarrier cyclicBarrier) {
+            this.cyclicBarrier = cyclicBarrier;
+        }
+ 
+        @Override
+        public void run() {
+            System.out.println("线程"+Thread.currentThread().getName()+"正在写入数据...");
+            try {
+                Thread.sleep(5000);      //以睡眠来模拟写入数据操作
+                System.out.println("线程"+Thread.currentThread().getName()+"写入数据完毕，等待其他线程写入完毕");
+                try {
+                    cyclicBarrier.await(2000, TimeUnit.MILLISECONDS);
+                } catch (TimeoutException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }catch(BrokenBarrierException e){
+                e.printStackTrace();
+            }
+            System.out.println(Thread.currentThread().getName()+"所有线程写入完毕，继续处理其他任务...");
+        }
+    }
+}
+
+输出：
+线程Thread-0正在写入数据...
+线程Thread-2正在写入数据...
+线程Thread-1正在写入数据...
+线程Thread-2写入数据完毕，等待其他线程写入完毕
+线程Thread-0写入数据完毕，等待其他线程写入完毕
+线程Thread-1写入数据完毕，等待其他线程写入完毕
+线程Thread-3正在写入数据...
+java.util.concurrent.TimeoutException
+Thread-1所有线程写入完毕，继续处理其他任务...
+Thread-0所有线程写入完毕，继续处理其他任务...
+    at java.util.concurrent.CyclicBarrier.dowait(Unknown Source)
+    at java.util.concurrent.CyclicBarrier.await(Unknown Source)
+    at com.cxh.test1.Test$Writer.run(Test.java:58)
+java.util.concurrent.BrokenBarrierException
+    at java.util.concurrent.CyclicBarrier.dowait(Unknown Source)
+    at java.util.concurrent.CyclicBarrier.await(Unknown Source)
+    at com.cxh.test1.Test$Writer.run(Test.java:58)
+java.util.concurrent.BrokenBarrierException
+    at java.util.concurrent.CyclicBarrier.dowait(Unknown Source)
+    at java.util.concurrent.CyclicBarrier.await(Unknown Source)
+    at com.cxh.test1.Test$Writer.run(Test.java:58)
+Thread-2所有线程写入完毕，继续处理其他任务...
+java.util.concurrent.BrokenBarrierException
+线程Thread-3写入数据完毕，等待其他线程写入完毕
+    at java.util.concurrent.CyclicBarrier.dowait(Unknown Source)
+    at java.util.concurrent.CyclicBarrier.await(Unknown Source)
+    at com.cxh.test1.Test$Writer.run(Test.java:58)
+Thread-3所有线程写入完毕，继续处理其他任务...
+```
+
+
+
+　　上面的代码在main方法的for循环中，故意让最后一个线程启动延迟，因为在前面三个线程都达到barrier之后，等待了指定的时间发现第四个线程还没有达到barrier，就抛出异常并继续执行后面的任务。
+
+
+
+**可以重用的CyclicBarrier**：
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        int N = 4;
+        CyclicBarrier barrier  = new CyclicBarrier(N);
+         
+        for(int i=0;i<N;i++) {
+            new Writer(barrier).start();
+        }
+         
+        try {
+            Thread.sleep(25000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+         
+        System.out.println("CyclicBarrier重用");
+         
+        for(int i=0;i<N;i++) {
+            new Writer(barrier).start();
+        }
+    }
+    static class Writer extends Thread{
+        private CyclicBarrier cyclicBarrier;
+        public Writer(CyclicBarrier cyclicBarrier) {
+            this.cyclicBarrier = cyclicBarrier;
+        }
+ 
+        @Override
+        public void run() {
+            System.out.println("线程"+Thread.currentThread().getName()+"正在写入数据...");
+            try {
+                Thread.sleep(5000);      //以睡眠来模拟写入数据操作
+                System.out.println("线程"+Thread.currentThread().getName()+"写入数据完毕，等待其他线程写入完毕");
+             
+                cyclicBarrier.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }catch(BrokenBarrierException e){
+                e.printStackTrace();
+            }
+            System.out.println(Thread.currentThread().getName()+"所有线程写入完毕，继续处理其他任务...");
+        }
+    }
+}
+
+输出：
+线程Thread-0正在写入数据...
+线程Thread-1正在写入数据...
+线程Thread-3正在写入数据...
+线程Thread-2正在写入数据...
+线程Thread-1写入数据完毕，等待其他线程写入完毕
+线程Thread-3写入数据完毕，等待其他线程写入完毕
+线程Thread-2写入数据完毕，等待其他线程写入完毕
+线程Thread-0写入数据完毕，等待其他线程写入完毕
+Thread-0所有线程写入完毕，继续处理其他任务...
+Thread-3所有线程写入完毕，继续处理其他任务...
+Thread-1所有线程写入完毕，继续处理其他任务...
+Thread-2所有线程写入完毕，继续处理其他任务...
+CyclicBarrier重用
+线程Thread-4正在写入数据...
+线程Thread-5正在写入数据...
+线程Thread-6正在写入数据...
+线程Thread-7正在写入数据...
+线程Thread-7写入数据完毕，等待其他线程写入完毕
+线程Thread-5写入数据完毕，等待其他线程写入完毕
+线程Thread-6写入数据完毕，等待其他线程写入完毕
+线程Thread-4写入数据完毕，等待其他线程写入完毕
+Thread-4所有线程写入完毕，继续处理其他任务...
+Thread-5所有线程写入完毕，继续处理其他任务...
+Thread-6所有线程写入完毕，继续处理其他任务...
+Thread-7所有线程写入完毕，继续处理其他任务...
+```
+
+从执行结果可以看出，在初次的4个线程越过barrier状态后，又可以用来进行新一轮的使用。而CountDownLatch无法进行重复使用。
+
+#### 1.4、应用场景
+
+### 2、原理
+
+#### 2.1、await
+
+然后CyclicBarrier中最重要的方法就是await方法，它有2个重载版本：
+
+```java
+	  /* @return the arrival index of the current thread, where index
      *         {@code getParties() - 1} indicates the first
      *         to arrive and zero indicates the last to arrive
-     * @throws InterruptedException if the current thread was interrupted
-     *         while waiting
+     * @throws InterruptedException if the current thread was interrupted while waiting
      * @throws BrokenBarrierException if <em>another</em> thread was
      *         interrupted or timed out while the current thread was
      *         waiting, or the barrier was reset, or the barrier was
@@ -93,7 +382,7 @@ CyclicBarrier类位于java.util.concurrent包下，CyclicBarrier提供2个构造
 
 第二个版本是让这些线程等待至一定的时间，如果还有线程没有到达barrier状态就直接让到达barrier的线程执行后续任务。
 
-### 1.3、dowait方法
+#### 2.2、dowait
 
 ```java
     /**
@@ -111,7 +400,7 @@ CyclicBarrier类位于java.util.concurrent包下，CyclicBarrier提供2个构造
             //当前generation“已损坏”，抛出BrokenBarrierException异常
             //抛出该异常一般都是某个线程在等待某个处于“断开”状态的CyclicBarrie
             if (g.broken)
-                //当某个线程试图等待处于断开状态的 barrier 时，或者 barrier 进入断开状态而线程处于等待状态时，抛出该异常
+            //当某个线程试图等待处于断开状态的 barrier 时，或者 barrier 进入断开状态而线程处于等待状态	    时，抛出该异常
                 throw new BrokenBarrierException();
             //如果线程中断，终止CyclicBarrier
             if (Thread.interrupted()) {
@@ -202,283 +491,21 @@ CyclicBarrier类位于java.util.concurrent包下，CyclicBarrier提供2个构造
 任何线程在等待时被中断了，则其他所有线程都将抛出 BrokenBarrierException 异常，并将 barrier 置于**损坏**状态。
 
 
+### 3、总结
+
+#### 3.1、使用注意
+
+#### 3.2、其他
 
 
 
-　　下面举几个例子就明白了：
 
-　　假若有若干个线程都要进行写数据操作，并且只有所有线程都完成写数据操作之后，这些线程才能继续做后面的事情，此时就可以利用CyclicBarrier了：
 
-```java
-public class Test {
-    public static void main(String[] args) {
-        int N = 4;
-        CyclicBarrier barrier  = new CyclicBarrier(N);
-        for(int i=0;i<N;i++)
-            new Writer(barrier).start();
-    }
-    static class Writer extends Thread{
-        private CyclicBarrier cyclicBarrier;
-        public Writer(CyclicBarrier cyclicBarrier) {
-            this.cyclicBarrier = cyclicBarrier;
-        }
- 
-        @Override
-        public void run() {
-            System.out.println("线程"+Thread.currentThread().getName()+"正在写入数据...");
-            try {
-                Thread.sleep(5000);      //以睡眠来模拟写入数据操作
-                System.out.println("线程"+Thread.currentThread().getName()+"写入数据完毕，等待其他线程写入完毕");
-                cyclicBarrier.await();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }catch(BrokenBarrierException e){
-                e.printStackTrace();
-            }
-            System.out.println("所有线程写入完毕，继续处理其他任务...");
-        }
-    }
-}
-
-输出：
-线程Thread-0正在写入数据...
-线程Thread-3正在写入数据...
-线程Thread-2正在写入数据...
-线程Thread-1正在写入数据...
-线程Thread-2写入数据完毕，等待其他线程写入完毕
-线程Thread-0写入数据完毕，等待其他线程写入完毕
-线程Thread-3写入数据完毕，等待其他线程写入完毕
-线程Thread-1写入数据完毕，等待其他线程写入完毕
-所有线程写入完毕，继续处理其他任务...
-所有线程写入完毕，继续处理其他任务...
-所有线程写入完毕，继续处理其他任务...
-所有线程写入完毕，继续处理其他任务...
-```
+　　
 
 
 
-从上面输出结果可以看出，每个写入线程执行完写数据操作之后，就在等待其他线程写入操作完毕。
-
-当所有线程线程写入操作完毕之后，所有线程就继续进行后续的操作了。
-
-如果说想在所有线程写入操作完之后，进行额外的其他操作可以为CyclicBarrier提供Runnable参数：
-
-```java
-public class Test {
-    public static void main(String[] args) {
-        int N = 4;
-        CyclicBarrier barrier  = new CyclicBarrier(N,new Runnable() {
-            @Override
-            public void run() {
-                System.out.println("当前线程"+Thread.currentThread().getName());   
-            }
-        });
-         
-        for(int i=0;i<N;i++)
-            new Writer(barrier).start();
-    }
-    static class Writer extends Thread{
-        private CyclicBarrier cyclicBarrier;
-        public Writer(CyclicBarrier cyclicBarrier) {
-            this.cyclicBarrier = cyclicBarrier;
-        }
- 
-        @Override
-        public void run() {
-            System.out.println("线程"+Thread.currentThread().getName()+"正在写入数据...");
-            try {
-                Thread.sleep(5000);      //以睡眠来模拟写入数据操作
-                System.out.println("线程"+Thread.currentThread().getName()+"写入数据完毕，等待其他线程写入完毕");
-                cyclicBarrier.await();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }catch(BrokenBarrierException e){
-                e.printStackTrace();
-            }
-            System.out.println("所有线程写入完毕，继续处理其他任务...");
-        }
-    }
-}
-
-输出：
-线程Thread-0正在写入数据...
-线程Thread-1正在写入数据...
-线程Thread-2正在写入数据...
-线程Thread-3正在写入数据...
-线程Thread-0写入数据完毕，等待其他线程写入完毕
-线程Thread-1写入数据完毕，等待其他线程写入完毕
-线程Thread-2写入数据完毕，等待其他线程写入完毕
-线程Thread-3写入数据完毕，等待其他线程写入完毕
-当前线程Thread-3
-所有线程写入完毕，继续处理其他任务...
-所有线程写入完毕，继续处理其他任务...
-所有线程写入完毕，继续处理其他任务...
-所有线程写入完毕，继续处理其他任务...
-```
-
- 
-
-　　从结果可以看出，当四个线程都到达barrier状态后，会从四个线程中选择一个线程去执行Runnable。
-
- 　下面看一下为await指定时间的效果：
-
-```java
-public class Test {
-    public static void main(String[] args) {
-        int N = 4;
-        CyclicBarrier barrier  = new CyclicBarrier(N);
-         
-        for(int i=0;i<N;i++) {
-            if(i<N-1)
-                new Writer(barrier).start();
-            else {
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                new Writer(barrier).start();
-            }
-        }
-    }
-    static class Writer extends Thread{
-        private CyclicBarrier cyclicBarrier;
-        public Writer(CyclicBarrier cyclicBarrier) {
-            this.cyclicBarrier = cyclicBarrier;
-        }
- 
-        @Override
-        public void run() {
-            System.out.println("线程"+Thread.currentThread().getName()+"正在写入数据...");
-            try {
-                Thread.sleep(5000);      //以睡眠来模拟写入数据操作
-                System.out.println("线程"+Thread.currentThread().getName()+"写入数据完毕，等待其他线程写入完毕");
-                try {
-                    cyclicBarrier.await(2000, TimeUnit.MILLISECONDS);
-                } catch (TimeoutException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }catch(BrokenBarrierException e){
-                e.printStackTrace();
-            }
-            System.out.println(Thread.currentThread().getName()+"所有线程写入完毕，继续处理其他任务...");
-        }
-    }
-}
-
-输出：
-线程Thread-0正在写入数据...
-线程Thread-2正在写入数据...
-线程Thread-1正在写入数据...
-线程Thread-2写入数据完毕，等待其他线程写入完毕
-线程Thread-0写入数据完毕，等待其他线程写入完毕
-线程Thread-1写入数据完毕，等待其他线程写入完毕
-线程Thread-3正在写入数据...
-java.util.concurrent.TimeoutException
-Thread-1所有线程写入完毕，继续处理其他任务...
-Thread-0所有线程写入完毕，继续处理其他任务...
-    at java.util.concurrent.CyclicBarrier.dowait(Unknown Source)
-    at java.util.concurrent.CyclicBarrier.await(Unknown Source)
-    at com.cxh.test1.Test$Writer.run(Test.java:58)
-java.util.concurrent.BrokenBarrierException
-    at java.util.concurrent.CyclicBarrier.dowait(Unknown Source)
-    at java.util.concurrent.CyclicBarrier.await(Unknown Source)
-    at com.cxh.test1.Test$Writer.run(Test.java:58)
-java.util.concurrent.BrokenBarrierException
-    at java.util.concurrent.CyclicBarrier.dowait(Unknown Source)
-    at java.util.concurrent.CyclicBarrier.await(Unknown Source)
-    at com.cxh.test1.Test$Writer.run(Test.java:58)
-Thread-2所有线程写入完毕，继续处理其他任务...
-java.util.concurrent.BrokenBarrierException
-线程Thread-3写入数据完毕，等待其他线程写入完毕
-    at java.util.concurrent.CyclicBarrier.dowait(Unknown Source)
-    at java.util.concurrent.CyclicBarrier.await(Unknown Source)
-    at com.cxh.test1.Test$Writer.run(Test.java:58)
-Thread-3所有线程写入完毕，继续处理其他任务...
-```
 
 
-
-　　上面的代码在main方法的for循环中，故意让最后一个线程启动延迟，因为在前面三个线程都达到barrier之后，等待了指定的时间发现第四个线程还没有达到barrier，就抛出异常并继续执行后面的任务。
-
-　　另外CyclicBarrier是可以重用的，看下面这个例子：
-
-```java
-public class Test {
-    public static void main(String[] args) {
-        int N = 4;
-        CyclicBarrier barrier  = new CyclicBarrier(N);
-         
-        for(int i=0;i<N;i++) {
-            new Writer(barrier).start();
-        }
-         
-        try {
-            Thread.sleep(25000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-         
-        System.out.println("CyclicBarrier重用");
-         
-        for(int i=0;i<N;i++) {
-            new Writer(barrier).start();
-        }
-    }
-    static class Writer extends Thread{
-        private CyclicBarrier cyclicBarrier;
-        public Writer(CyclicBarrier cyclicBarrier) {
-            this.cyclicBarrier = cyclicBarrier;
-        }
- 
-        @Override
-        public void run() {
-            System.out.println("线程"+Thread.currentThread().getName()+"正在写入数据...");
-            try {
-                Thread.sleep(5000);      //以睡眠来模拟写入数据操作
-                System.out.println("线程"+Thread.currentThread().getName()+"写入数据完毕，等待其他线程写入完毕");
-             
-                cyclicBarrier.await();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }catch(BrokenBarrierException e){
-                e.printStackTrace();
-            }
-            System.out.println(Thread.currentThread().getName()+"所有线程写入完毕，继续处理其他任务...");
-        }
-    }
-}
-
-输出：
-线程Thread-0正在写入数据...
-线程Thread-1正在写入数据...
-线程Thread-3正在写入数据...
-线程Thread-2正在写入数据...
-线程Thread-1写入数据完毕，等待其他线程写入完毕
-线程Thread-3写入数据完毕，等待其他线程写入完毕
-线程Thread-2写入数据完毕，等待其他线程写入完毕
-线程Thread-0写入数据完毕，等待其他线程写入完毕
-Thread-0所有线程写入完毕，继续处理其他任务...
-Thread-3所有线程写入完毕，继续处理其他任务...
-Thread-1所有线程写入完毕，继续处理其他任务...
-Thread-2所有线程写入完毕，继续处理其他任务...
-CyclicBarrier重用
-线程Thread-4正在写入数据...
-线程Thread-5正在写入数据...
-线程Thread-6正在写入数据...
-线程Thread-7正在写入数据...
-线程Thread-7写入数据完毕，等待其他线程写入完毕
-线程Thread-5写入数据完毕，等待其他线程写入完毕
-线程Thread-6写入数据完毕，等待其他线程写入完毕
-线程Thread-4写入数据完毕，等待其他线程写入完毕
-Thread-4所有线程写入完毕，继续处理其他任务...
-Thread-5所有线程写入完毕，继续处理其他任务...
-Thread-6所有线程写入完毕，继续处理其他任务...
-Thread-7所有线程写入完毕，继续处理其他任务...
-```
-
-从执行结果可以看出，在初次的4个线程越过barrier状态后，又可以用来进行新一轮的使用。而CountDownLatch无法进行重复使用。
+　　
 
