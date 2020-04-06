@@ -103,6 +103,8 @@ public class AtomicInteger extends Number implements java.io.Serializable {
     /**
      * Eventually sets to the given value.
      *
+     * 最终设置为newValue,使用 lazySet 设置之后可能导致其他线程在之后的一小段时间内还是可以读到旧的值。
+     *
      * @param newValue the new value
      * @since 1.6
      */
@@ -112,6 +114,7 @@ public class AtomicInteger extends Number implements java.io.Serializable {
 
     /**
      * Atomically sets to the given value and returns the old value.
+     *
      *
      * @param newValue the new value
      * @return the previous value
@@ -123,6 +126,8 @@ public class AtomicInteger extends Number implements java.io.Serializable {
     /**
      * Atomically sets the value to the given updated value
      * if the current value {@code ==} the expected value.
+     *
+     * 如果输入的数值等于预期值，则以原子方式将该值设置为输入值（update）
      *
      * @param expect the expected value
      * @param update the new value
