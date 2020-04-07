@@ -103,8 +103,7 @@ import java.util.function.UnaryOperator;
  * @since   1.2
  */
 
-public class ArrayList<E> extends AbstractList<E>
-        implements List<E>, RandomAccess, Cloneable, java.io.Serializable
+public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAccess, Cloneable, java.io.Serializable
 {
     private static final long serialVersionUID = 8683452581122892189L;
 
@@ -168,7 +167,7 @@ public class ArrayList<E> extends AbstractList<E>
      * Constructs an empty list with an initial capacity of ten.
      * 无参构造函数，默认初始容量 10
      */
-    public ArrayList() {
+    public ArrayList(){
         this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
     }
 
@@ -200,6 +199,8 @@ public class ArrayList<E> extends AbstractList<E>
      * Trims the capacity of this <tt>ArrayList</tt> instance to be the
      * list's current size.  An application can use this operation to minimize
      * the storage of an <tt>ArrayList</tt> instance.
+     *
+     * 修改这个ArrayList实例的容量是列表的当前大小。 应用程序可以使用此操作来最小化ArrayList实例的存储。
      */
     public void trimToSize() {
         modCount++;
@@ -215,7 +216,10 @@ public class ArrayList<E> extends AbstractList<E>
      * necessary, to ensure that it can hold at least the number of elements
      * specified by the minimum capacity argument.
      *
-     * @param   minCapacity   the desired minimum capacity
+     * 下面是ArrayList的扩容机制，ArrayList的扩容机制提高了性能，如果每次只扩充一个，
+     * 那么频繁的插入会导致频繁的拷贝，降低性能，而ArrayList的扩容机制避免了这种情况。
+     *
+     * @param   minCapacity   the desired minimum capacity  所需的最小容量
      */
     public void ensureCapacity(int minCapacity) {
         int minExpand = (elementData != DEFAULTCAPACITY_EMPTY_ELEMENTDATA)
@@ -230,15 +234,24 @@ public class ArrayList<E> extends AbstractList<E>
         }
     }
 
+    /**
+     * 得到最小扩容量
+     * @param minCapacity
+     */
     private void ensureCapacityInternal(int minCapacity) {
         // 判空
         if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
+            // 获取默认的容量和传入参数的较大值
             minCapacity = Math.max(DEFAULT_CAPACITY, minCapacity);
         }
 
         ensureExplicitCapacity(minCapacity);
     }
 
+    /**
+     * 判断是否需要扩容
+     * @param minCapacity
+     */
     private void ensureExplicitCapacity(int minCapacity) {
         modCount++;
 
@@ -268,13 +281,17 @@ public class ArrayList<E> extends AbstractList<E>
      * @param minCapacity the desired minimum capacity
      */
     private void grow(int minCapacity) {
-        // overflow-conscious code
+        // oldCapacity为旧容量，newCapacity为新容量
         int oldCapacity = elementData.length;
-        // 数组容量被扩大为原来的 1.5 倍
+        //将oldCapacity 右移一位，其效果相当于oldCapacity /2，
+        //我们知道位运算的速度远远快于整除运算，整句运算式的结果就是将新容量更新为旧容量的1.5倍，
         int newCapacity = oldCapacity + (oldCapacity >> 1);
+        //然后检查新容量是否大于最小需要容量，若还是小于最小需要容量，那么就把最小需要容量当作数组的新容量，
         if (newCapacity - minCapacity < 0)
             newCapacity = minCapacity;
-        // MAX_ARRAY_SIZE = 2<sup>31</sup>-1-8
+        //再检查新容量是否超出了ArrayList所定义的最大容量，
+        //若超出了，则调用hugeCapacity()来比较minCapacity和 MAX_ARRAY_SIZE，
+        //如果minCapacity大于MAX_ARRAY_SIZE，则新容量则为Interger.MAX_VALUE，否则，新容量大小则为 MAX_ARRAY_SIZE。
         if (newCapacity - MAX_ARRAY_SIZE > 0)
             newCapacity = hugeCapacity(minCapacity);
         // minCapacity is usually close to size, so this is a win:
@@ -284,6 +301,7 @@ public class ArrayList<E> extends AbstractList<E>
     private static int hugeCapacity(int minCapacity) {
         if (minCapacity < 0) // overflow
             throw new OutOfMemoryError();
+        //比较minCapacity和 MAX_ARRAY_SIZE
         return (minCapacity > MAX_ARRAY_SIZE) ?
             Integer.MAX_VALUE :
             MAX_ARRAY_SIZE;
@@ -318,7 +336,8 @@ public class ArrayList<E> extends AbstractList<E>
      * @param o element whose presence in this list is to be tested
      * @return <tt>true</tt> if this list contains the specified element
      */
-    public boolean contains(Object o) {
+    public boolean contains(Object o){
+        //indexOf()方法：返回此列表中指定元素的首次出现的索引，如果此列表不包含此元素，则为-1
         return indexOf(o) >= 0;
     }
 
@@ -399,10 +418,13 @@ public class ArrayList<E> extends AbstractList<E>
      * <p>This method acts as bridge between array-based and collection-based
      * APIs.
      *
+     * 以正确的顺序（从第一个到最后一个元素）返回一个包含此列表中所有元素的数组。
+     * 返回的数组将是“安全的”，因为该列表不保留对它的引用。 （换句话说，这个方法必须分配一个新的数组）。
+     * 因此，调用者可以自由地修改返回的数组。 此方法充当基于阵列和基于集合的API之间的桥梁。
      * @return an array containing all of the elements in this list in
      *         proper sequence
      */
-    public Object[] toArray() {
+    public Object[] toArray(){
         return Arrays.copyOf(elementData, size);
     }
 
@@ -448,12 +470,13 @@ public class ArrayList<E> extends AbstractList<E>
     // Positional Access Operations
 
     @SuppressWarnings("unchecked")
-    E elementData(int index) {
+    E elementData(int index){
         return (E) elementData[index];
     }
 
     /**
      * Returns the element at the specified position in this list.
+     * 返回此列表中指定位置的元素。
      *
      * @param  index index of the element to return
      * @return the element at the specified position in this list
@@ -488,13 +511,15 @@ public class ArrayList<E> extends AbstractList<E>
     /**
      * Appends the specified element to the end of this list.
      *
-     * 添加元素
+     * 将指定的元素追加到此列表的末尾。
      *
      * @param e element to be appended to this list
      * @return <tt>true</tt> (as specified by {@link Collection#add})
      */
     public boolean add(E e) {
-        ensureCapacityInternal(size + 1);  // Increments modCount!!
+        // Increments modCount!!
+        ensureCapacityInternal(size + 1);
+        //这里看到ArrayList添加元素的实质就相当于为数组赋值
         elementData[size++] = e;
         return true;
     }
@@ -513,11 +538,10 @@ public class ArrayList<E> extends AbstractList<E>
     public void add(int index, E element) {
         // 角标范围检查
         rangeCheckForAdd(index);
-
-        ensureCapacityInternal(size + 1);  // Increments modCount!!
+        // Increments modCount!!
+        ensureCapacityInternal(size + 1);
         // 浅拷贝，把指定 index 位置及以后的元素向后移动
-        System.arraycopy(elementData, index, elementData, index + 1,
-                         size - index);
+        System.arraycopy(elementData, index, elementData, index + 1, size - index);
         // 把新增的元素插入到指定位置上
         elementData[index] = element;
         size++;
@@ -587,6 +611,7 @@ public class ArrayList<E> extends AbstractList<E>
     /*
      * Private remove method that skips bounds checking and does not
      * return the value removed.
+     *
      * 移除指定角标的元素
      */
     private void fastRemove(int index) {
