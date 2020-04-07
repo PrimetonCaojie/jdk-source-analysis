@@ -32,7 +32,7 @@
 |                             | ArrayList                  | 1        |      |
 |                             | LinkedList                 | 1        |      |
 |                             | HashMap                    | 1        |      |
-|                             | Hashtable                  | 1        |      |
+|                             | [Hashtable](https://github.com/muyutingfeng/jdk-source-analysis/blob/master/jdk1.8/src/java/util/Hashtable_%E5%88%86%E6%9E%90.md) | 1        | 2020.04.05 |
 |                             | HashSet                    | 1        |      |
 |                             | LinkedHashMap              | 1        |      |
 |                             | LinkedHashSet              | 1        |      |
